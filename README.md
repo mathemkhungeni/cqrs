@@ -29,3 +29,16 @@ curl --location --request PUT 'http://localhost:9191/products/1' \
     }
 }'
 ```
+
+### DeleteProduct Event
+
+```
+curl --location --request DELETE 'http://localhost:9191/products/1'
+```
+
+### GetProducts Event
+
+```
+curl --location --request GET 'http://localhost:9292/products' --header 'Content-Type: application/json'
+```
+
