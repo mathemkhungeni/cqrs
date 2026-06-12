@@ -1,0 +1,72 @@
+include:
+  - path: ./product-command-service/docker-compose.yml
+    project_directory: ./product-command-service
+  - path: ./product-query-service/docker-compose.yml
+    project_directory: ./product-query-service
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: cqrs-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: cqrs-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:29092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  product-command-service:
+    build:
+      context: ./product-command-service
+    container_name: product-command-service
+    ports:
+      - "9191:9191"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-write:3306/cqrs-write
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      mysql-write:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  product-query-service:
+    build:
+      context: ./product-query-service
+    container_name: product-query-service
+    ports:
+      - "9292:9292"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-read:3306/cqrs-read
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: Password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      mysql-read:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      product-command-service:
+        condition: service_started

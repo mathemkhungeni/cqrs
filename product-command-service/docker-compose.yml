@@ -1,0 +1,17 @@
+services:
+  mysql-write:
+    image: mysql:8.0.31
+    container_name: mysql-cqrs-write-service
+    environment:
+      MYSQL_ROOT_PASSWORD: Password
+    ports:
+      - "3308:3306"
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pPassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

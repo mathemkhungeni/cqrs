@@ -1,0 +1,7 @@
+target/
+.idea/
+.vscode/
+mysql/
+*.sock
+product-command-service/mysql/
+product-query-service/mysql
